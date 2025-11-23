@@ -1,0 +1,10 @@
+# 排除数据文件和大文件
+data/
+chroma_db/
+*.pkl
+*.sqlite3
+*.json
+*.log
+__pycache__/
+chroma_db_m3/
+
