@@ -2,7 +2,7 @@
 
 ## Part1
 **Plants vs. Zombies Fandom Wiki** 自动爬取 → 解析 → 切分 → 嵌入 → 混合检索 → 重排序 的完整 RAG 构建流程。
-
+直接看formal_preprocess文件夹里面的，看格式的化可以把数量设置小一点，全部的网页有7000+应该vscode打不开
 
 ---
 
