@@ -82,7 +82,7 @@ pip install torch transformers accelerate chromadb rank_bm25 nltk
 ```
 
 ---
-
+<!-- 
 ### 4. build_index_better.py
 
 #### 功能
@@ -121,6 +121,50 @@ pip install chromadb sentence-transformers rank_bm25 tqdm
 ```
 pip install torch transformers chromadb rank_bm25
 ```
+
+---
+-->
+
+### 4. search_bgem3.py
+
+#### 功能
+
+**四种方法检索 + 重排序**
+
+检索流程：
+
+1. 方法一：BM25 提取精确匹配（捕获技能名、植物名）
+2. 方法二：向量模型提取语义相关（理解复杂问法）
+3. 方法三：混合法一二，取并集
+4. 方法四：HyDE+向量模型(这里HyDE也相对于做了个prompt，这里用的是message_mode为no_system(见下一part5的说明))
+4. 候选集使用：
+
+   * **bge-reranker-v2-m3**（Cross Encoder） 进行最终排序
+
+最后得到候选context.
+
+#### 安装
+
+```
+pip install torch transformers chromadb rank_bm25 nltk pickle openai
+```
+
+---
+
+### 5. generator.py
+
+#### 功能
+
+**将search到的context融合到prompt**
+
+流程：
+
+1. 使用search_bgem3中的rag类来retrieve和rerank （在generator中的类里也用了search，可能有点冗余，后续再整合优化）
+2. 将search到的context融合到prompt，共2乘2得4种模式：
+    * prompt_mode(vanilla/instruction)
+    * message_mode(with_system:即system+user/no_system:即只有user) （这个是proj文档没要求的）
+
+
 
 ---
 
