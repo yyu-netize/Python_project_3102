@@ -63,7 +63,6 @@ If the answer is not mentioned, say you don't know.
             try:
                 response = client.chat.completions.create(
                     model=self.model_name,
-                
                     messages=[
                         {"role": "system", "content": system_msg},
                         {"role": "user", "content": user_msg},
@@ -139,27 +138,27 @@ Now provide an answer.
         candidates = []
 
         if retrieve_mode == "hyde":
-            hyde_doc = self.hyde_generate_doc(query)
+            hyde_doc = self.rag.hyde_generate_doc(query)
             print(f"\n📄 HyDE Generated Document:\n{hyde_doc}\n")
 
             # Dense embedding from HyDE doc
-            candidates = self.retrieve_dense(hyde_doc, top_k=30)
+            candidates = self.rag.retrieve_dense(hyde_doc, top_k=30)
             print(f"   - HyDE Dense Retriever finds {len(candidates)} candidates.")
 
         if (retrieve_mode == "hybrid"):
-            candidates = self.retrieve_hybrid(query, top_k=30)
+            candidates = self.rag.retrieve_hybrid(query, top_k=30)
             print(f" - Dense Retriever + BM25 finds {len(candidates)} candidates.")
             
         if (retrieve_mode == "dense"):
-            candidates = self.retrieve_dense(query, top_k=30)
+            candidates = self.rag.retrieve_dense(query, top_k=30)
             print(f" - Dense Retriever finds {len(candidates)} candidates.")
             
         if (retrieve_mode == "bm25"):
-            candidates = self.retrieve_bm25(query, top_k=30)
+            candidates = self.rag.retrieve_bm25(query, top_k=30)
             print(f" - BM25 finds {len(candidates)} candidates.")
         
         # Rerank candidates, get top N
-        final_results = self.rerank(query, candidates, top_n=5)
+        final_results = self.rag.rerank(query, candidates, top_n=5)
 
         # Use Qwen3-8B to generate the final answer
         answer = self.generate_answer(query, final_results, prompt_mode, message_mode)
