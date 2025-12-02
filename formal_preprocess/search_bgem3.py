@@ -43,18 +43,30 @@ for pkg in ["punkt", "punkt_tab"]:
  
 class UltimateRAG:
     def __init__(self):
-        print("⚙️ 正在初始化 RAG 引擎...")
+        print("⚙️ Initialize RAG...")
 
         self.client_llm = client_llm
         self.llm_name = LLM_NAME
 
-        # 1. 加载 Embedding 模型 (SentenceTransformer)
-        print(f" [1/4] 加载 Embedding 模型: {MODEL_NAME} ...")
+        # 1. Load embedding model (SentenceTransformer: bge-m3)
+        print(f" [1/4] Loading embedding model: {MODEL_NAME} ...")
         self.model = SentenceTransformer(MODEL_NAME, device=DEVICE)
-        self.model.max_seq_length = 1024 # 设置最大输入长度
-    
-        # 2. 加载 Reranker 模型 (Cross-Encoder)
-        print(f" [2/4] 加载 Reranker 模型: {RERANKER_MODEL_NAME} ...")
+        self.model.max_seq_length = 1024 # set max length of input
+
+        # 2. Connect ChromaDB
+        print(" [2/4] Connecting to vector database...")
+        self.client = chromadb.PersistentClient(path=DB_DIR)
+        self.collection = self.client.get_collection("pvz_knowledge_m3")
+
+        # 3. Load BM25
+        print(" [3/4] Loading BM25...")
+        with open(BM25_PATH, 'rb') as f:
+            data = pickle.load(f)
+            self.bm25 = data['bm25']
+            self.bm25_chunks = data['chunks'] # BM25 nedd original chunks list
+
+        # 4. Load Reranker (Cross-Encoder)
+        print(f" [4/4] Loading Reranker model: {RERANKER_MODEL_NAME} ...")
         self.rerank_tokenizer = AutoTokenizer.from_pretrained(RERANKER_MODEL_NAME)
         self.rerank_model = AutoModelForSequenceClassification.from_pretrained(
             RERANKER_MODEL_NAME,
@@ -62,35 +74,21 @@ class UltimateRAG:
             ).to(DEVICE)
         self.rerank_model.eval()
     
-        # 2. 连接 ChromaDB
-        print(" [3/4] 连接向量数据库...")
-        self.client = chromadb.PersistentClient(path=DB_DIR)
-        self.collection = self.client.get_collection("pvz_knowledge_m3")
-    
-        # 3. 加载 BM25
-        print(" [4/4] 加载 BM25 索引...")
-        with open(BM25_PATH, 'rb') as f:
-            data = pickle.load(f)
-            self.bm25 = data['bm25']
-            self.bm25_chunks = data['chunks'] # BM25 需要原始 chunks 列表来定位结果
-    
-        print("✅ RAG 引擎就绪! 等待指令...\n")
+        print("✅ RAG ready! Waiting for Instructions...\n")
  
  
     def get_query_embedding(self, query):
         """
-        使用 SentenceTransformer 获取查询的嵌入向量
+        Use SentenceTransformer (bge-m3) to get embedding vectors of query
         """
-        # 指令：定义任务性质
         task_instruction = "Retrieve detailed attributes, stats, and strategies for Plants vs. Zombies game entities."
-        # 格式：Instruction + \n + Query
         prompt = f"Instruction: {task_instruction}\nQuery: {query}"
         embedding = self.model.encode(prompt, convert_to_tensor=True, normalize_embeddings=True)
         return embedding.cpu().tolist()
     
     def hyde_generate_doc(self, query):
         """
-        生成 HyDE 虚构文档（Hypothetical Answer）
+        Generate HyDE (Hypothetical Answer)
         """
         prompt = f"""
 You are a knowledgeable assistant. 
@@ -123,7 +121,10 @@ Hypothetical Document:
 
     
     def retrieve_bm25(self, query, top_k=30):
-        tokenized_query = query.lower().split()
+        """
+        Get retrieved contexts from BM25
+        """
+        tokenized_query = query.lower().split() # simple tokenization
         bm25_top_n = self.bm25.get_top_n(tokenized_query, self.bm25_chunks, n=top_k)
         results = []
         for chunk in bm25_top_n:
@@ -136,7 +137,7 @@ Hypothetical Document:
 
     def retrieve_dense(self, query, top_k=30):
         """
-        model: SentenceTransformer 对象
+        Get retrieved contexts from dense vector search
         collection: ChromaDB collection
         """
         query_vec = self.get_query_embedding(query)
@@ -154,18 +155,17 @@ Hypothetical Document:
  
     def retrieve_hybrid(self, query, top_k=30):
         """
-        混合检索：从 Vector 和 BM25 各取 top_k，取并集
+        Hybrid retrieve: get candidates from both Vector and BM25, then merge results
         """
         candidates = {} # {chunk_id: chunk_data}
         
-        # --- A. 向量检索 ---
+        # --- A. Vector retriever ---
         query_vec = self.get_query_embedding(query)
         vec_results = self.collection.query(
             query_embeddings=[query_vec],
             n_results=top_k
         )
-        
-        # 处理 Vector 结果
+        # Handle Vector results
         if vec_results['ids']:
             for i, doc_id in enumerate(vec_results['ids'][0]):
                 candidates[doc_id] = {
@@ -174,11 +174,10 @@ Hypothetical Document:
                     'source': 'vector'
                 }
         
-        # --- B. BM25 检索 ---
-        tokenized_query = query.lower().split() # 简单分词
+        # --- B. BM25 retriever ---
+        tokenized_query = query.lower().split() # simple tokenization
         bm25_top_n = self.bm25.get_top_n(tokenized_query, self.bm25_chunks, n=top_k)
-        
-        # 处理 BM25 结果
+        # Handle BM25 results (merge)
         for chunk in bm25_top_n:
             doc_id = chunk['id']
             if doc_id not in candidates:
@@ -188,19 +187,19 @@ Hypothetical Document:
                     'source': 'bm25'
                 }
             else:
-                candidates[doc_id]['source'] = 'hybrid' # 两边都找到了
+                candidates[doc_id]['source'] = 'hybrid' # found in both
         
         return list(candidates.values())
  
  
     def rerank(self, query, candidates, top_n=5):
         """
-        使用 Cross-Encoder 对候选集进行重排序
+        Use Cross-Encoder to rerank the candidates
         """
         if not candidates:
             return []
         
-        # 构建 pairs: [[query, doc1], [query, doc2], ...]
+        # Build pairs: [[query, doc1], [query, doc2], ...]
         pairs = [[query, doc['text']] for doc in candidates]
         
         with torch.no_grad():
@@ -212,19 +211,19 @@ Hypothetical Document:
                 max_length=512
             ).to(DEVICE)
         
-            # 计算相关性分数
+            # Calculate relevance scores
             scores = self.rerank_model(**inputs, return_dict=True).logits.view(-1).float()
             
-            # 归一化分数 (Sigmoid)
+            # Sigmoid
             scores = torch.sigmoid(scores)
         
-        # 将分数附加到 candidates
+        # Add scores to candidates
         ranked_results = []
         for i, score in enumerate(scores):
             candidates[i]['score'] = score.item()
             ranked_results.append(candidates[i])
         
-        # 按分数降序排列
+        # Sort results by score in descending order
         ranked_results.sort(key=lambda x: x['score'], reverse=True)
         
         return ranked_results[:top_n]
@@ -238,35 +237,32 @@ Hypothetical Document:
             hyde_doc = self.hyde_generate_doc(query)
             print(f"\n📄 HyDE Generated Document:\n{hyde_doc}\n")
 
-            # dense embedding from HyDE doc
+            # Dense embedding from HyDE doc
             candidates = self.retrieve_dense(hyde_doc, top_k=30)
-            print(f"   - HyDE Dense Retrieval 找到 {len(candidates)} 个候选片段")
+            print(f"   - HyDE Dense Retriever finds {len(candidates)} candidates.")
 
         if (retrieve_mode == "hybrid"):
-            # 1. 混合召回 (Recall) - 获取大量候选 (比如 30 个)
             candidates = self.retrieve_hybrid(query, top_k=30)
-            print(f" - 召回阶段找到 {len(candidates)} 个候选片段 (Vector + BM25)")
+            print(f" - Dense Retriever + BM25 finds {len(candidates)} candidates.")
             
         if (retrieve_mode == "dense"):
-            # 1. 混合召回 (Recall) - 获取大量候选 (比如 30 个)
             candidates = self.retrieve_dense(query, top_k=30)
-            print(f" - 召回阶段找到 {len(candidates)} 个候选片段 (Vector)")
+            print(f" - Dense Retriever finds {len(candidates)} candidates.")
             
         if (retrieve_mode == "bm25"):
-            # 1. 混合召回 (Recall) - 获取大量候选 (比如 30 个)
             candidates = self.retrieve_bm25(query, top_k=30)
-            print(f" - 召回阶段找到 {len(candidates)} 个候选片段 (BM25)")
+            print(f" - BM25 finds {len(candidates)} candidates.")
         
-        # 2. 重排序 (Rerank) - 提炼 Top 5
+        # Rerank candidates, get top N
         final_results = self.rerank(query, candidates, top_n=5)
             
-        # 3. 展示结果
-        print(f" - Rerank 完成，精选 Top {len(final_results)}:\n")
+        # Show rerank results
+        print(f" - Rerank finished, SHow Top {len(final_results)}:\n")
         for i, res in enumerate(final_results):
-            score = res['score'] if 'score' in res else 0 # 默认分数为0
+            score = res['score'] if 'score' in res else 0 
             source = res['source']
             title = res['metadata']['title']
-            # 截取部分内容展示
+            # Only show first 150 chars after 'Content:'
             content_preview = res['text'].split('\nContent:\n')[-1][:150].replace('\n', ' ')
                 
             print(f"[{i+1}] Score: {score:.4f} | Source: {source} | Title: {title}")
@@ -277,16 +273,51 @@ Hypothetical Document:
             
  
 if __name__ == "__main__":
-    # 初始化引擎
+    # Initialize RAG engine
     rag = UltimateRAG()
     
-    # 测试案例
+    # Test cases
     rag.search("Which plant can slow down zombies?", retrieve_mode="hybrid")
     rag.search("What is the sun cost of Peashooter?", retrieve_mode="dense")
     rag.search("Difference between Cherry Bomb and Jalapeno", retrieve_mode="hyde")
     
-    # 如果你想手动输入:
     while True:
-        q = input("\n请输入问题 (输入 q 退出): ")
-        if q.lower() == 'q': break
-        rag.search(q, retrieve_mode="hybrid")
+        print("\n=== RAG Query System ===")
+        print("Input format example: Your question | retrieve_mode")
+        print("Parameter description:")
+        print("- retrieve_mode: hybrid / dense / sparse / hyde (default: hybrid)")
+        print("Enter q directly to exit, enter only the question to use default parameters")
+        
+        user_input = input("\nPlease enter query content: ")
+        
+        # Exit condition
+        if user_input.lower() == 'q':
+            break
+        
+        # Parse input content
+        parts = [part.strip() for part in user_input.split('|')]
+        query = parts[0] if parts[0] else None
+        
+        # Set default parameters
+        retrieve_mode = "hybrid"
+        
+        # Update parameters (if provided by user)
+        if len(parts) >= 2 and parts[1]:
+            retrieve_mode = parts[1]
+        
+        # Validate parameter validity
+        valid_retrieve_modes = ["hybrid", "dense", "sparse", "hyde"]
+        
+        if retrieve_mode not in valid_retrieve_modes:
+            print(f"Invalid retrieve_mode: {retrieve_mode}, using default value hybrid")
+            retrieve_mode = "hybrid"
+        
+        # Execute query
+        if query:
+            print(f"\nExecuting query - retrieve_mode: {retrieve_mode}")
+            rag.search(
+                query, 
+                retrieve_mode=retrieve_mode
+            )
+        else:
+            print("Query content cannot be empty!")
