@@ -3,7 +3,7 @@ import torch
 from search_bgem3 import UltimateRAG
 
 # --- CONFIGURATION ---
-SILICONFLOW_API_KEY = "sk-bpdybiceumehnyfudsglnizvhqssgpsjpusvienlfgchijdl"  # SiliconFlow API 密钥
+SILICONFLOW_API_KEY = "sk-bpdybiceumehnyfudsglnizvhqssgpsjpusvienlfgchijdl"  # SiliconFlow API key
 MODEL_NAME = "Qwen/Qwen3-8B"      
 
 # Initialize the Client pointing to SiliconFlow
@@ -16,17 +16,15 @@ print(f"\nSUCCESS: Client initialized using model: {MODEL_NAME}")
 
 class UltimateRAGWithGenerator:
     def __init__(self):
-        # 模型配置
+        
         self.client = client
         self.model_name = MODEL_NAME
-        # 初始化 UltimateRAG 实例
         self.rag = UltimateRAG()
 
-    def generate_answer(self, query, candidates, prompt_mode, message_mode): #prompt_mode可选：1.vanilla，2.instruction，  message_mode可选：1.with_system，2.no_system
+    def generate_answer(self, query, candidates, prompt_mode, message_mode):
         """
-        使用 Qwen3-8B 生成最终的回答
+        Use Qwen3-8B to generate the final answer
         """
-        # 合并候选文本作为上下文
         unique_candidates = {cand['text'] for cand in candidates}
         context = " ".join(unique_candidates)
 
@@ -75,7 +73,7 @@ If the answer is not mentioned, say you don't know.
                     top_p=1.0,
                     n=1,
                 )
-                answer = response.choices[0].message.content.strip()  # 获取生成的回答
+                answer = response.choices[0].message.content.strip()  
                 return answer
             
             except Exception as e:
@@ -123,7 +121,7 @@ Now provide an answer.
                     top_p=1.0,
                     n=1,
                 )
-                answer = response.choices[0].message.content.strip()  # 获取生成的回答
+                answer = response.choices[0].message.content.strip() 
                 return answer
             
             except Exception as e:
@@ -132,76 +130,79 @@ Now provide an answer.
 
     def search(self, query, retrieve_mode, prompt_mode, message_mode):
         """
-        进行检索并生成最终的回答
+        Do the retrieval based on the specified mode, then rerank and tranfer to LLM for answer generation.
+        1. retrieve_mode: hybrid / dense / bm25 / hyde
+        2. prompt_mode: vanilla / instruction
+        3. message_mode: with_system / no_system
         """
         print(f"\n🔎 Query: {query}")
-        candidate = []
+        candidates = []
 
-        # 1. 混合召回 (Recall) - 获取候选文本 (例如 30 个)
         if retrieve_mode == "hyde":
-            hyde_doc = self.rag.hyde_generate_doc(query)
+            hyde_doc = self.hyde_generate_doc(query)
             print(f"\n📄 HyDE Generated Document:\n{hyde_doc}\n")
-            # dense embedding from HyDE doc
-            candidates = self.rag.retrieve_dense(hyde_doc, top_k=30)
-            print(f"   - HyDE Dense Retrieval 找到 {len(candidates)} 个候选片段")
-        if retrieve_mode == "hybrid":
-            candidates = self.rag.retrieve_hybrid(query, top_k=30)
-            print(f"   - 召回阶段找到 {len(candidates)} 个候选片段 (Vector + BM25)")
-        elif retrieve_mode == "dense":
-            candidates = self.rag.retrieve_dense(query, top_k=30)
-            print(f"   - 召回阶段找到 {len(candidates)} 个候选片段 (Vector)")
-        elif retrieve_mode == "bm25":
-            candidates = self.rag.retrieve_bm25(query, top_k=30)
-            print(f"   - 召回阶段找到 {len(candidates)} 个候选片段 (BM25)")
+
+            # Dense embedding from HyDE doc
+            candidates = self.retrieve_dense(hyde_doc, top_k=30)
+            print(f"   - HyDE Dense Retriever finds {len(candidates)} candidates.")
+
+        if (retrieve_mode == "hybrid"):
+            candidates = self.retrieve_hybrid(query, top_k=30)
+            print(f" - Dense Retriever + BM25 finds {len(candidates)} candidates.")
+            
+        if (retrieve_mode == "dense"):
+            candidates = self.retrieve_dense(query, top_k=30)
+            print(f" - Dense Retriever finds {len(candidates)} candidates.")
+            
+        if (retrieve_mode == "bm25"):
+            candidates = self.retrieve_bm25(query, top_k=30)
+            print(f" - BM25 finds {len(candidates)} candidates.")
         
+        # Rerank candidates, get top N
+        final_results = self.rerank(query, candidates, top_n=5)
 
-        # 2. 重排序 (Rerank) - 提炼 Top 5
-        final_results = self.rag.rerank(query, candidates, top_n=5)
+        # Use Qwen3-8B to generate the final answer
+        answer = self.generate_answer(query, final_results, prompt_mode, message_mode)
 
-        # 3. 使用 Qwen3-8B 生成最终答案
-        answer = self.generate_answer(query, final_results, prompt_mode, message_mode)#prompt_mode可选：1.vanilla，2.instruction，  message_mode可选：1.with_system，2.no_system
-
-        # 4. 展示生成的答案
+        # Show final answer
         print(f"Answer:\n {answer}")
         return answer
 
 
 if __name__ == "__main__":
-    # 初始化 RAG 引擎
     rag_with_generator = UltimateRAGWithGenerator()
     
-    # 测试查询
+    # test cases
     rag_with_generator.search("Which plant can slow down zombies?", retrieve_mode="hybrid", prompt_mode="instruction", message_mode="with_system")
     rag_with_generator.search("What is the sun cost of Peashooter?", retrieve_mode="dense", prompt_mode="instruction", message_mode="with_system")
     rag_with_generator.search("Difference between Cherry Bomb and Jalapeno", retrieve_mode="bm25", prompt_mode="instruction", message_mode="with_system")
 
-    # 手动输入查询
-    # 手动输入查询（支持参数配置）
+
 while True:
-    print("\n=== RAG 查询系统 ===")
-    print("输入格式示例: 你的问题 | retrieve_mode | prompt_mode | message_mode")
-    print("参数说明:")
-    print("- retrieve_mode: hybrid / dense / sparse (默认: hybrid)")
-    print("- prompt_mode: vanilla / instruction (默认: instruction)")
-    print("- message_mode: with_system / no_system (默认: with_system)")
-    print("直接输入 q 退出，只输入问题则使用默认参数")
+    print("\n=== RAG Query System ===")
+    print("Input format example: Your question | retrieve_mode | prompt_mode | message_mode")
+    print("Parameter description:")
+    print("- retrieve_mode: hybrid / dense / bm25 / hyde (default: hybrid)")
+    print("- prompt_mode: vanilla / instruction (default: instruction)")
+    print("- message_mode: with_system / no_system (default: with_system)")
+    print("Enter q directly to exit, enter only the question to use default parameters")
     
-    user_input = input("\n请输入查询内容: ")
+    user_input = input("\nPlease enter query content: ")
     
-    # 退出条件
+    # Exit condition
     if user_input.lower() == 'q':
         break
     
-    # 解析输入内容
+    # Parse input content
     parts = [part.strip() for part in user_input.split('|')]
     query = parts[0] if parts[0] else None
     
-    # 设置默认参数
+    # Set default parameters
     retrieve_mode = "hybrid"
     prompt_mode = "instruction"
     message_mode = "with_system"
     
-    # 更新参数（如果用户提供了）
+    # Update parameters (if provided by user)
     if len(parts) >= 2 and parts[1]:
         retrieve_mode = parts[1]
     if len(parts) >= 3 and parts[2]:
@@ -209,26 +210,26 @@ while True:
     if len(parts) >= 4 and parts[3]:
         message_mode = parts[3]
     
-    # 验证参数有效性
-    valid_retrieve_modes = ["hybrid", "dense", "sparse"]
+    # Validate parameter validity
+    valid_retrieve_modes = ["hybrid", "dense", "bm25", "hyde"]
     valid_prompt_modes = ["vanilla", "instruction"]
     valid_message_modes = ["with_system", "no_system"]
     
     if retrieve_mode not in valid_retrieve_modes:
-        print(f"无效的 retrieve_mode: {retrieve_mode}，使用默认值 hybrid")
+        print(f"Invalid retrieve_mode: {retrieve_mode}, using default value hybrid")
         retrieve_mode = "hybrid"
     
     if prompt_mode not in valid_prompt_modes:
-        print(f"无效的 prompt_mode: {prompt_mode}，使用默认值 instruction")
+        print(f"Invalid prompt_mode: {prompt_mode}, using default value instruction")
         prompt_mode = "instruction"
     
     if message_mode not in valid_message_modes:
-        print(f"无效的 message_mode: {message_mode}，使用默认值 with_system")
+        print(f"Invalid message_mode: {message_mode}, using default value with_system")
         message_mode = "with_system"
     
-    # 执行查询
+    # Execute query
     if query:
-        print(f"\n执行查询 - retrieve_mode: {retrieve_mode}, prompt_mode: {prompt_mode}, message_mode: {message_mode}")
+        print(f"\nExecuting query - retrieve_mode: {retrieve_mode}, prompt_mode: {prompt_mode}, message_mode: {message_mode}")
         rag_with_generator.search(
             query, 
             retrieve_mode=retrieve_mode, 
@@ -236,4 +237,4 @@ while True:
             message_mode=message_mode
         )
     else:
-        print("查询内容不能为空！")
+        print("Query content cannot be empty!")
