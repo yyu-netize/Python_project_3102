@@ -285,7 +285,7 @@ if __name__ == "__main__":
         print("\n=== RAG Query System ===")
         print("Input format example: Your question | retrieve_mode")
         print("Parameter description:")
-        print("- retrieve_mode: hybrid / dense / sparse / hyde (default: hybrid)")
+        print("- retrieve_mode: hybrid / dense / bm25 / hyde (default: hybrid)")
         print("Enter q directly to exit, enter only the question to use default parameters")
         
         user_input = input("\nPlease enter query content: ")
@@ -306,7 +306,7 @@ if __name__ == "__main__":
             retrieve_mode = parts[1]
         
         # Validate parameter validity
-        valid_retrieve_modes = ["hybrid", "dense", "sparse", "hyde"]
+        valid_retrieve_modes = ["hybrid", "dense", "bm25", "hyde"]
         
         if retrieve_mode not in valid_retrieve_modes:
             print(f"Invalid retrieve_mode: {retrieve_mode}, using default value hybrid")
