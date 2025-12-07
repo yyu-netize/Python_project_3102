@@ -46,20 +46,19 @@ This project demonstrates how PII redaction affects both privacy protection and 
 
 ### Step 1: Prepare Data
 
-First, prepare a subset of your data and inject PII:
+Prepare a subset of your data and inject PII:
 
 ```bash
-python prepare.py
+python prepare.py / 
 ```
 
-This will:
-- Create a 10% subset of your original data
-- Inject PII into 30% of the documents
-- Generate ground truth labels for evaluation
+Hyperparameter can be tuned:
+- Percentage subset of your original data
+- Percentage 30% of the documents
 - Output files:
   - `data/pvz_wiki_rag_small_clean.json` (clean subset)
   - `data/pvz_wiki_rag_small_dirty.json` (dirty subset with PII)
-  - `data/pii_ground_truth.json` (ground truth labels)
+  - `data/pii_ground_truth.json` (ground truth labels for evaluation)
 
 ### Step 2: Process Data
 
@@ -75,7 +74,7 @@ python process_unsafe.py
 python process_redacted.py
 ```
 
-These scripts will:
+
 - Split documents into chunks based on Markdown headers
 - Create JSONL files for vector indexing
 - Output files:
@@ -90,8 +89,7 @@ Build separate vector indexes for unsafe and safe data:
 python build_dual_indexes.py
 ```
 
-This will:
-- Download the embedding model from HuggingFace (if not cached)
+
 - Create ChromaDB collections for both datasets
 - Store embeddings in `data/chroma_db_experiment/`
 
@@ -105,7 +103,7 @@ Run the evaluation to measure privacy leakage and utility preservation:
 python evaluate_privacy.py
 ```
 
-This will:
+
 - Test privacy leakage by querying for PII
 - Test utility by querying for numerical information
 - Generate a comparison visualization
@@ -136,11 +134,6 @@ The project uses cloud models from HuggingFace by default. You can change the mo
 
 All paths are relative to the project root. The default data directory is `data/`. You can modify `BASE_DIR` in each script if needed.
 
-### Injection Parameters
-
-In `prepare.py`:
-- `SLICE_RATIO = 0.1`: Percentage of original data to use (10%)
-- `INJECTION_RATIO = 0.3`: Percentage of documents to inject with PII (30%)
 
 ## Data Format
 
@@ -163,15 +156,6 @@ Your input JSON file should have the following structure:
 - **Chunks (JSONL)**: Each line is a JSON object with `doc_title`, `section_title`, `text`, and `metadata`
 - **Ground Truth**: JSON object mapping document titles to injected PII information
 
-## PII Types Detected
-
-The `PIIRedactor` class detects and redacts:
-
-1. **Email addresses**: Standard email format
-2. **IP addresses**: IPv4 addresses
-3. **SSN**: Social Security Numbers (format: 000-00-0000)
-4. **Phone numbers**: Various formats (123-456-7890, (123) 456-7890, etc.)
-
 ## Evaluation Metrics
 
 1. **Privacy Leakage Rate**: Percentage of PII queries that successfully retrieve sensitive information (lower is better)
@@ -181,31 +165,5 @@ The `PIIRedactor` class detects and redacts:
 
 - Python 3.8+
 - CUDA-capable GPU (optional, for faster processing with larger models)
-- Internet connection (for downloading models from HuggingFace)
 
-## Notes
-
-- Models are automatically downloaded from HuggingFace on first use
-- All paths are relative, making the project easily portable
-- The project creates necessary directories automatically
-- ChromaDB stores indexes persistently in `data/chroma_db_experiment/`
-
-## Troubleshooting
-
-1. **Model download issues**: Ensure you have internet connection. Models are cached after first download.
-
-2. **File not found errors**: Make sure you've run scripts in order:
-   - `prepare.py` → `process_unsafe.py` & `process_redacted.py` → `build_dual_indexes.py` → `evaluate_privacy.py`
-
-3. **Memory issues**: Reduce `SLICE_RATIO` in `prepare.py` or use a smaller model.
-
-4. **GPU not detected**: The project will automatically fall back to CPU. Processing will be slower but still functional.
-
-## License
-
-This project is for educational purposes.
-
-## Author
-
-Created for academic submission and research on RAG privacy protection.
 
