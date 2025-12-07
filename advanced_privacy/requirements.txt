@@ -1,0 +1,15 @@
+# Core dependencies
+faker>=19.0.0
+sentence-transformers>=2.2.0
+chromadb>=0.4.0
+torch>=2.0.0
+
+# Data analysis and visualization
+pandas>=2.0.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+numpy>=1.24.0
+
+# Standard library modules used (no installation needed):
+# json, os, re, random
+
