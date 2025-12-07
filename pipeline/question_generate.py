@@ -249,7 +249,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # Updated defaults to relative paths
     parser.add_argument("--input", type=str, default="./data/rag_chunks.json")
-    parser.add_argument("--output", type=str, default="./data/qa_dataset_1_3.json")
+    parser.add_argument("--output", type=str, default="./data/qa_dataset_clean.json")
     args = parser.parse_args()
     
     generate_dataset(args.input, args.output)
