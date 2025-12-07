@@ -14,7 +14,7 @@ This project implements a complete RAG system for answering questions about the 
 ## Project Member
 Our group collaboratively finished the project and is consist of 3 members: Yue Yu, Jiongxu Chen and Yueran Qiu.
 
-### ** Dataset Preparation & RAG Pipeline Construction (Yue Yu)**
+### **Dataset Preparation & RAG Pipeline Construction (Yue Yu)**
 - Designed and implemented a scalable web-scraping pipeline to collect high-quality domain knowledge from publicly accessible websites.
 - Designed and implemented the full data-processing pipeline, including data cleaning and chunking (fixed-size and semantic-based strategies).
 - Generated embeddings and built the vector index for retrieval.
@@ -23,7 +23,7 @@ Our group collaboratively finished the project and is consist of 3 members: Yue 
 
 ---
 
-### ** Retrieval System & Re-ranking Module (Jiongxu Chen)**
+### **Retrieval System & Re-ranking Module (Jiongxu Chen)**
 - Designed and coded a modular search interface supporting **BM25**, **Dense**, **Hybrid**, and **HyDE-style** retrieval.
 - Implemented the core retrieval system and integrated it with the generation model for movie-related QA.
 - Added a lightweight cross-encoder re-ranker to improve the ordering of initially retrieved documents.
@@ -32,7 +32,7 @@ Our group collaboratively finished the project and is consist of 3 members: Yue 
 
 ---
 
-### **Member 3 — Multi-turn Dialogue, Query Rewriting & Evaluation**
+### **Member 3 — Multi-turn Dialogue, Query Rewriting & Evaluation (Yueran Qiu)**
 - Built the multi-turn dialogue manager and implemented advanced query-rewriting task(e.g., HyDE or LLM-based condense-question rewriting).
 - Prepared a high-quality evaluation set: ≥50 curated QA pairs with ground-truth answers and source citations.
 - Conducted RAG-based evaluationsblation studies, comparing retrieval and prompt mode.
@@ -319,6 +319,7 @@ answer2 = chat.ask("Why should I protect him?")
 # View chat history
 history = chat.get_history()
 ```
+
 
 
 
