@@ -150,7 +150,8 @@ python evaluation.py eval-retrieval \
 python evaluation.py eval-answers \
     --qa-path ./data/qa_dataset_clean.json \
     --mode hybrid \
-    --rerank \
+    --prompt-mode instruction \
+    --message-mode with_system \
     --rewrite \
     --sample-size 50
 ```
@@ -227,6 +228,7 @@ answer2 = chat.ask("Why should I protect him?")
 # 查看对话历史
 history = chat.get_history()
 ```
+
 
 
 
