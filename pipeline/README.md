@@ -178,7 +178,7 @@ python evaluation.py eval-answers \
 | `--mode` / `--retrieve-mode` | str  | `hybrid`                | `hybrid` / `dense` / `bm25` / `hyde` | 检索模式                               |
 | `--sample-size`              | int  | `50`                    | —                                    | 抽样数量                               |
 | `--rerank`       / `--use_rerank`            | bool | `True`                 | —                                    | 是否对候选文档进行重排序                       |
-| `--prompt-mode`              | str  | `instruction`           | `instruction` / `instruction`            | prompt 模板模式                        |
+| `--prompt-mode`              | str  | `instruction`           | `instruction` / `vanilla`            | prompt 模板模式                        |
 | `--message-mode`             | str  | `with_system`           | `with_system` / `no_system`          | ChatCompletion 是否使用 system message |
 | `--random-seed`              | int  | `42`                    | —                                    | 随机采样种子                             |
 
@@ -274,6 +274,7 @@ answer2 = chat.ask("Why should I protect him?")
 # 查看对话历史
 history = chat.get_history()
 ```
+
 
 
 
