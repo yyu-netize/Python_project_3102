@@ -232,5 +232,3 @@ history = chat.get_history()
 
 
 
-
-
