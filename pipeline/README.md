@@ -302,6 +302,8 @@ answer2 = chat.ask("Why should I protect him?")
 history = chat.get_history()
 ```
 
+### Rerank Task is Accomplished in Retrieval Construction
+
 
 
 
