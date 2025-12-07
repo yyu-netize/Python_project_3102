@@ -155,7 +155,7 @@ python multi_turn_chat.py \
   --qa-path qa_dataset_annotated.json \
   --output qa_dataset_clean.json \
   --sample-size 0
-
+```
 ### Step 6: Evaluation System
 
 #### 1. Retrieval Evaluation
@@ -299,6 +299,7 @@ answer2 = chat.ask("Why should I protect him?")
 # View chat history
 history = chat.get_history()
 ```
+
 
 
 
