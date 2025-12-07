@@ -501,6 +501,8 @@ def evaluate_single_prediction(question: str, gold: str, pred: str):
 def eval_answer_quality_single_turn(
     qa_path: str = "qa_dataset_clean.json",
     retrieve_mode: str = "hybrid",
+    prompt_mode: str = "instruction",
+    message_mode: str = "with_system",
     use_rerank: bool = True,      
     enable_rewrite: bool = False,
     sample_size: int = 100,
@@ -530,8 +532,8 @@ def eval_answer_quality_single_turn(
         enable_rewrite=enable_rewrite,
         default_retrieve_mode=retrieve_mode,
         default_rerank_mode=use_rerank,
-        default_prompt_mode="instruction",
-        default_message_mode="with_system",
+        default_prompt_mode=prompt_mode,
+        default_message_mode=message_mode,
     )
 
     for idx, item in enumerate(qa_items, 1):
@@ -575,7 +577,7 @@ def eval_answer_quality_single_turn(
     print(f"Avg F1:       {avg_f1:.4f}")
     print(f"Avg ROUGE-L:  {avg_rouge:.4f}")
 
-    out_path = f"eval_answers_{retrieve_mode}_rerank{use_rerank}_rewrite{enable_rewrite}.json"
+    out_path = f"eval_answers_{retrieve_mode}_rerank{use_rerank}_{prompt_mode}_{message_mode}_rewrite{enable_rewrite}.json"
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(
             {
@@ -646,6 +648,30 @@ def main():
         action="store_true",
         help="Use cross-encoder re-ranker when generating answers"
     )
+    p_ans.add_argument(
+        "--prompt-mode",
+        dest="prompt_mode",
+        type=str,
+        default="instruction",
+        choices=["vanilla", "instruction"],
+        help="Prompt template mode: vanilla or instruction (default: instruction)",
+    )
+    p_ans.add_argument(
+        "--message-mode",
+        dest="message_mode",
+        type=str,
+        default="with_system",
+        choices=["with_system", "no_system"],
+        help="Whether to use system message in ChatCompletion",
+    )
+    p_ans.add_argument(
+        "--random-seed",
+        dest="random_seed",
+        type=int,
+        default=42,
+        help="Random seed for sampling QA items",
+    )
+
 
     # 7.3 LLM-as-Judge
     p_judge = subparsers.add_parser("judge", help="LLM-as-Judge on answer eval results")
@@ -674,11 +700,14 @@ def main():
     elif args.command == "eval-answers":
         eval_answer_quality_single_turn(
             qa_path=args.qa_path,
-            retrieve_mode=args.retrieve_mode,
-            use_rerank=args.use_rerank,
             enable_rewrite=args.enable_rewrite,
+            retrieve_mode=args.retrieve_mode,
+            prompt_mode=args.prompt_mode,
+            message_mode=args.message_mode,
             sample_size=args.sample_size,
+            random_seed=args.random_seed,
         )
+
     elif args.command == "judge":
         llm_judge_answers(
             eval_result_path=args.eval_path,
