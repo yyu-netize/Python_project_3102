@@ -133,8 +133,9 @@ answer = rag_gen.search(
 
 ### 步骤6：评估系统
 
-#### 检索评估
+#### 1.检索评估
 
+##### 命令示例
 ```bash
 python evaluation.py eval-retrieval \
     --qa-path ./data/qa_dataset_clean.json \
@@ -144,8 +145,20 @@ python evaluation.py eval-retrieval \
     --rerank
 ```
 
-#### 答案质量评估
+##### 可选参数
 
+| 参数                           | 类型     | 默认值                     | 可选项                                  | 说明                     |
+| ---------------------------- | ------ | ----------------------- | ------------------------------------ | ---------------------- |
+| `--qa-path`                  | str    | `qa_dataset_clean.json` | —                                    | QA 数据文件路径              |
+| `--mode` / `--retrieve-mode` | str    | `hybrid`                | `hybrid` / `dense` / `bm25` / `hyde` | 检索模式                   |
+| `--k-list`                   | int 列表 | `[1,3,5,10]`            | 任意整数列表                               | 计算 Recall@k 的 k 值      |
+| `--sample-size`              | int    | `100`                   | —                                    | 从 QA 集中抽取的样本数          |
+| `--rerank` / `--use-rerank`                   | bool   | `False`                 | —                                    | 是否启用 Cross-Encoder 重排序 |
+
+
+#### 2.答案质量评估
+
+##### 命令示例
 ```bash
 python evaluation.py eval-answers \
     --qa-path ./data/qa_dataset_clean.json \
@@ -156,8 +169,24 @@ python evaluation.py eval-answers \
     --sample-size 50
 ```
 
-#### 检索消融实验
+##### 可选参数
 
+| 参数                           | 类型   | 默认值                     | 可选项                                  | 说明                                 |
+| ---------------------------- | ---- | ----------------------- | ------------------------------------ | ---------------------------------- |
+| `--qa-path`                  | str  | `qa_dataset_clean.json` | —                                    | QA 数据文件路径                          |
+| `--rewrite` / `--enable-rewrite`           | bool | `False`                 | —                                    | 是否启用 query rewriting               |
+| `--mode` / `--retrieve-mode` | str  | `hybrid`                | `hybrid` / `dense` / `bm25` / `hyde` | 检索模式                               |
+| `--sample-size`              | int  | `50`                    | —                                    | 抽样数量                               |
+| `--rerank`       / `--use_rerank`            | bool | `True`                 | —                                    | 是否对候选文档进行重排序                       |
+| `--prompt-mode`              | str  | `instruction`           | `instruction` / `instruction`            | prompt 模板模式                        |
+| `--message-mode`             | str  | `with_system`           | `with_system` / `no_system`          | ChatCompletion 是否使用 system message |
+| `--random-seed`              | int  | `42`                    | —                                    | 随机采样种子                             |
+
+
+
+#### 3.检索消融实验
+
+##### 命令示例
 ```bash
 python evaluation.py ablation-retrieval \
     --qa-path ./data/qa_dataset_clean.json \
@@ -165,13 +194,30 @@ python evaluation.py ablation-retrieval \
     --k-list 1 3 5 10
 ```
 
-#### LLM-as-Judge评估
 
+##### 可选参数
+
+| 参数              | 类型     | 默认值                     | 可选项    | 说明          |
+| --------------- | ------ | ----------------------- | ------ | ----------- |
+| `--qa-path`     | str    | `qa_dataset_clean.json` | —      | QA 数据文件路径   |
+| `--sample-size` | int    | `100`                   | —      | 抽样数量        |
+| `--k-list`      | int 列表 | `[1,3,5,10]`            | 任意整数列表 | Recall@k 指标 |
+
+
+#### 4.LLM-as-Judge评估
+
+##### 命令示例
 ```bash
 python evaluation.py judge \
     --eval-path eval_answers_hybrid_rerankTrue_rewriteFalse.json \
     --sample-size 30
 ```
+##### 可选参数
+| 参数              | 类型  | 默认值  | 可选项 | 说明                          |
+| --------------- | --- | ---- | --- | --------------------------- |
+| `--eval-path`   | str | *必填* | —   | eval-answers 生成的 `.json` 结果 |
+| `--sample-size` | int | `30` | —   | 从结果中抽样进行 LLM 评分             |
+
 
 ## 检索模式说明
 
