@@ -11,33 +11,6 @@ This project implements a complete RAG system for answering questions about the 
 - **Multi-turn Conversation**: Supports context-aware multi-turn Q&A, including query rewriting functionality.
 - **Complete Evaluation**: Provides retrieval evaluation, answer quality evaluation, and LLM-as-Judge evaluation.
 
-## Project Member
-Our group collaboratively finished the project and is consist of 3 members: Yue Yu, Jiongxu Chen and Yueran Qiu.
-
-### **Dataset Preparation & RAG Pipeline Construction (Yue Yu)**
-- Designed and implemented a scalable web-scraping pipeline to collect high-quality domain knowledge from publicly accessible websites.
-- Designed and implemented the full data-processing pipeline, including data cleaning and chunking (fixed-size and semantic-based strategies).
-- Generated embeddings and built the vector index for retrieval.
-- Added a safety/privacy module to automatically redact PII-like patterns and evaluated its impact on downstream answerability.
-- Contributed to the final report writing, especially the data pipeline and safety/privacy sections.
-
----
-
-### **Retrieval System & Re-ranking Module (Jiongxu Chen)**
-- Designed and coded a modular search interface supporting **BM25**, **Dense**, **Hybrid**, and **HyDE-style** retrieval.
-- Implemented the core retrieval system and integrated it with the generation model for movie-related QA.
-- Added a lightweight cross-encoder re-ranker to improve the ordering of initially retrieved documents.
-- Implemented **top-k retrieval** with configurable backends and fallback logic.
-- Contributed to the report writing, focusing on retrieval architecture, re-ranking experiments, and system design.
-
----
-
-### **Member 3 — Multi-turn Dialogue, Query Rewriting & Evaluation (Yueran Qiu)**
-- Built the multi-turn dialogue manager and implemented advanced query-rewriting task(e.g., HyDE or LLM-based condense-question rewriting).
-- Prepared a high-quality evaluation set: ≥50 curated QA pairs with ground-truth answers and source citations.
-- Conducted RAG-based evaluationsblation studies, comparing retrieval and prompt mode.
-- Reported comprehensive retrieval and answer-quality metrics (Recall@k, MRR, EM, F1/ROUGE) and implemented LLM-as-Judge evaluator for ≥30 samples to assess faithfulness and relevance.
-- Contributed to the report writing, especially all evaluation work and multi-turn system sections.
 
 ## Project Structure
 
@@ -319,6 +292,7 @@ answer2 = chat.ask("Why should I protect him?")
 # View chat history
 history = chat.get_history()
 ```
+
 
 
 
