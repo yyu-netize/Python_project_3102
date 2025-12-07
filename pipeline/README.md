@@ -152,7 +152,7 @@ python evaluation.py eval-answers \
     --mode hybrid \
     --prompt-mode instruction \
     --message-mode with_system \
-    --rewrite \
+    --enable-rewrite \
     --sample-size 50
 ```
 
@@ -228,6 +228,7 @@ answer2 = chat.ask("Why should I protect him?")
 # 查看对话历史
 history = chat.get_history()
 ```
+
 
 
 
